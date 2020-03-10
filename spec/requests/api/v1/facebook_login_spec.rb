@@ -26,7 +26,6 @@ RSpec.describe 'POST /api/v1/auth/sign_in', type: :request do
     end
 
     it 'returns expiry' do
-      binding.pry
       expect(response_json).to include 'expiry'
     end
 
