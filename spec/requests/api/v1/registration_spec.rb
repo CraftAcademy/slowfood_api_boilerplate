@@ -1,68 +1,87 @@
-RSpec.describe 'POST /api/vi/auth/sign_in', type: :request do
-  let(:headers) { { HTTP_ACCEPT: 'application/json' } }
-  let(:user) { create(:user) }
-  let(:expected_response) do
-      {
-          'data' => {
-              'id' => user.id, 'uid' => user.email, 'email' => user.email,
-              'provider' => 'email', 'allow_password_change' => false
-          }
-      }
-  end
-  describe 'with valid credentials' do
+RSpec.describe "POST /api/v1/auth", type: :request do
+    let(:headers) { { HTTP_ACCEPT: 'application/json' } }
+  
+    describe 'with valid credentials' do
       before do
-          post '/api/v1/auth/sign_in',
-          params: {
-              email: user.email,
-              password: user.password
-          },
-          headers: headers
+        post '/api/v1/auth',
+            params: {
+              email: 'example@craftacademy.se',
+              password: 'password',
+              password_confirmation: 'password'
+            },
+            headers: headers
       end
-
-      it 'returns 200 response status' do
-          expect(response).to have_http_status 200
+  
+      it 'returns a 200 response status' do
+        binding.pry
+        expect(response).to have_http_status 200
       end
-
-      it 'returns the expected response' do
-          expect(response_json).to eq expected_response
+      
+      it 'returns a success message' do
+        expect(response_json['status']).to eq 'success'
       end
-  end
-
-  describe 'with invalid password' do
-      before do 
-          post '/api/v1/auth/sign_in',
-          params: {
-              email: user.email,
-              password: 'wrong_password'
-          },
-          headers: headers
-      end
-
-      it 'returns 401 response status' do
-          expect(response).to have_http_status 401
-      end
-
-      it 'returns error message' do
-          expect(response_json['errors']).to eq ['Invalid login credentials. Please try again.']
-      end
-  end
-
-  describe 'with invalid email' do
-    before do
-      post '/api/v1/auth/sign_in',
-      params: {
-        email: 'wrong@email.com',
-        password: user.password
-      },
-      headers: headers
     end
-
-    it 'returns 401 response status' do
-      expect(response).to have_http_status 401
-    end
-
-    it 'returns error message' do
-      expect(response_json['errors']).to eq ['Invalid login credentials. Please try again.']
+  
+    context 'when a user submits' do
+      describe 'a non-matching password confirmation' do
+        before do
+          post '/api/v1/auth',
+              params: {
+                email: 'example@craftacademy.se',
+                password: 'password',
+                password_confirmation: 'wrong_password'
+              },
+              headers: headers
+        end
+  
+        it 'returns a 422 response status' do
+          expect(response).to have_http_status 422
+        end
+  
+        it 'returns an error message' do
+          expect(response_json['errors']['password_confirmation']).to eq ["doesn't match Password"]
+        end
+      end
+  
+      describe 'an invalid email address' do
+        before do
+          post '/api/v1/auth',
+              params: {
+                email: 'example@craft',
+                password: 'password',
+                password_confirmation: 'password'
+              },
+              headers: headers
+        end
+  
+        it 'returns a 422 response status' do
+          expect(response).to have_http_status 422
+        end
+  
+        it 'returns an error message' do
+          expect(response_json['errors']['email']).to eq ['is not an email']
+        end
+      end
+  
+      describe 'an already registered email' do
+        let!(:registered_user) { create(:user, email: 'coach@craftacademy.se') }
+        before do
+          post '/api/v1/auth',
+              params: {
+                email: 'coach@craftacademy.se',
+                password: 'password',
+                password_confirmation: 'password'
+              },
+              headers: headers
+        end
+  
+        it 'returns a 422 response status' do
+          expect(response).to have_http_status 422
+        end
+  
+        it 'returns an error message' do
+          expect(response_json['errors']['email']).to eq ['has already been taken']
+        end
+      end
     end
   end
-end
