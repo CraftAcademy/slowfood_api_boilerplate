@@ -8,7 +8,7 @@ Rails.application.routes.draw do
     end
 
     namespace :v1 do
-      
+      resources :articles, only: [:create], constraints: { format: 'json' }
     end
   end
 end
